@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FOSM-1 Ground Station</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
+<header>
+  <div class="header-left">
+    <span class="header-logo">FOSM-1</span>
+    <span class="header-sub">Ground Station Control &nbsp;·&nbsp; SPINO AX.25</span>
+  </div>
+  <div class="header-left">
+    <a href="/settings" class="header-sub" target="_blank">
+        🎛️ Settings
+    </a>
+  </div>
+  <div class="header-right">
+    <span class="clock" id="clock">--:--:--</span>
+    <div class="status-dot" id="statusDot" title="Connected"></div>
+  </div>
+</header>
+
+<!-- ════════════════════════════════ MAIN ════════════════════════════════ -->
+<main>
+
+  <!-- ══ LEFT COLUMN — UPLINK ═════════════════════════════════════════ -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title amber">⬆ Uplink</span>
+    </div>
+    <div class="panel-body">
+
+      <div class="section-label">Command Library</div>
+      <div class="field-group">
+        <span class="field-label">Available Commands</span>
+        <select id="uplinkCommandList" size="9"></select>
+      </div>
+
+      <div class="uplink-tools">
+        <button class="btn btn-ghost" onclick="loadUplinkCommands()">Refresh List</button>
+      </div>
+
+      <div class="uplink-status" id="uplinkStatus">Loading command list...</div>
+
+      <div class="section-label">Manual Command</div>
+      <div class="field-group">
+        <span class="field-label">Operator ID</span>
+        <input type="text" id="licenseInput" placeholder="Required" autocomplete="off"/>
+      </div>
+      <div class="field-group">
+        <span class="field-label">Command Name Or HEX Bytes</span>
+        <input type="text" id="commandInput" placeholder="CMD_RESET or AA BB CC" autocomplete="off"
+               onkeydown="if(event.key==='Enter') sendTextToPython()"/>
+      </div>
+      <button class="btn btn-amber" id="sendBtn" onclick="sendTextToPython()">
+        Send Command
+      </button>
+      <div class="send-progress" id="sendProgress" aria-hidden="true">
+        <div class="send-progress-label" id="sendProgressLabel">Sending...</div>
+        <div class="send-progress-track">
+          <div class="send-progress-bar" id="sendProgressBar"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ CENTER COLUMN — RECEPTION ═════════════════════════════════===== -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title green">⬇ Reception — FOSM-1</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- Statistics -->
+      <div class="stats-row">
+        <div class="stat-box">
+          <span class="stat-val" id="cntTotal">0</span>
+          <span class="stat-lbl">Received</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-val" id="cntOk" style="color:var(--green)">0</span>
+          <span class="stat-lbl">CRC OK</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-val" id="cntErr" style="color:var(--red)">0</span>
+          <span class="stat-lbl">Rejected</span>
+        </div>
+      </div>
+
+      <!-- Last decoded frame -->
+      <div class="section-label">Last received frame</div>
+
+      <div class="raw-box" id="lastRaw">
+        <span class="raw-label">RAW HEX</span>
+        <span id="rawHex">— waiting —</span>
+      </div>
+
+      <div class="decoded-grid" id="decodedGrid">
+        <div class="field-card">
+          <div class="fc-label">Destination</div>
+          <div class="fc-value blue" id="fDest">—</div>
+        </div>
+        <div class="field-card">
+          <div class="fc-label">Sender</div>
+          <div class="fc-value green" id="fSrc">—</div>
+        </div>
+        <div class="field-card">
+          <div class="fc-label">Ctrl</div>
+          <div class="fc-value" id="fCtrl">—</div>
+        </div>
+        <div class="field-card">
+          <div class="fc-label">PID</div>
+          <div class="fc-value" id="fPid">—</div>
+        </div>
+        <div class="field-card">
+          <div class="fc-label">Type</div>
+          <div class="fc-value" id="fType">—</div>
+        </div>
+        <div class="field-card">
+          <div class="fc-label">CRC</div>
+          <div class="fc-value" id="fCrc">—</div>
+        </div>
+        <!-- Length: hidden for beacons -->
+        <div class="field-card" id="lenCard">
+          <div class="fc-label">Payload length</div>
+          <div class="fc-value amber" id="fLen">—</div>
+        </div>
+        <div class="field-card full">
+          <div class="fc-label">Payload HEX</div>
+          <div class="fc-value" id="fPayload" style="font-size:0.65rem; line-height:1.6">—</div>
+        </div>
+        <div class="field-card full" id="asciiCard" style="display:none">
+          <div class="fc-label">ASCII Message</div>
+          <div class="ascii-block" id="fAscii">—</div>
+        </div>
+        <div class="field-card full">
+          <div class="fc-label">Descrambled Payload HEX</div>
+          <div class="fc-value" id="fDescrambledPayload" style="font-size:0.65rem; line-height:1.6">—</div>
+        </div>
+        <div class="field-card full" id="descrambledAsciiCard" style="display:none">
+          <div class="fc-label">Descrambled ASCII Message</div>
+          <div class="ascii-block" id="fDescrambledAscii">—</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ RIGHT COLUMN — CONSOLE ═════════════════════════════════======= -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title blue">◈ Console</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- Record control -->
+      <div class="section-label">Recording the hexa frames</div>
+      <button class="btn btn-green" id="recordBtn" onclick="toggleRecording()">
+        Start recording
+      </button>
+
+      <div class="section-label">Logs</div>
+      <div id="log-container"></div>
+
+      <!-- Frame history -->
+      <div class="section-label">History</div>
+      <div class="frame-history" id="frameHistory"></div>
+
+      <button class="btn btn-ghost" onclick="clearLogs()" style="flex-shrink:0;margin-top:4px;">
+        Clear console
+      </button>
+
+    </div>
+  </div>
+
+</main>
+
+<script src="/static/js/script.js"></script>
+</body>
+</html>

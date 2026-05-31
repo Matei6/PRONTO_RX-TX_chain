@@ -1,0 +1,6 @@
+# Normalise tous les fichiers texte en LF au moment du commit
+* text=auto
+
+# On force explicitement certains fichiers si nécessaire
+*.sh text eol=lf
+*.bat text eol=crlf

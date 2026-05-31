@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/static/css/settings.css" />
+</head>
+<body>
+  <header class="settings-header">
+    <div>
+      <div class="eyebrow">FOSM-1 Ground Station</div>
+      <h1>Settings</h1>
+    </div>
+    <a class="back-link" href="/">Back to dashboard</a>
+  </header>
+
+  <main class="settings-layout">
+    <section class="panel main-panel">
+      <h2>Radio Controls</h2>
+      <p class="panel-copy">Adjust the GNU Radio parameters in real time. Each change is sent immediately to the running flowgraph.</p>
+
+      <div class="control-row">
+        <label for="rbw_num">RBW</label>
+        <input type="range" id="rbw_num_slider" min="1000" max="50000" step="1000" value="10000" oninput="syncInput('rbw_num', this.value)">
+        <input type="number" id="rbw_num_num" value="10000" onchange="syncInput('rbw_num', this.value)">
+      </div>
+
+      <div class="control-row">
+        <label for="seuil">Threshold</label>
+        <input type="range" id="seuil_slider" min="-140" max="0" step="0.5" value="-75" oninput="syncInput('seuil', this.value)">
+        <input type="number" id="seuil_num" value="-75" step="0.5" onchange="syncInput('seuil', this.value)">
+      </div>
+
+      <div class="control-row">
+        <label for="freq_num">Filter Offset</label>
+        <input type="range" id="freq_num_slider" min="-50000" max="50000" step="100" value="0" oninput="syncInput('freq_num', this.value)">
+        <input type="number" id="freq_num_num" value="0" onchange="syncInput('freq_num', this.value)">
+      </div>
+
+      <div class="control-row">
+        <label for="freq_MHz">Center Frequency</label>
+        <input type="number" id="freq_MHz_input" value="435200000" onchange="sendParam('freq_MHz', this.value)">
+      </div>
+
+      <div class="control-row">
+        <label for="gain_dB">Gain</label>
+        <input type="range" id="gain_dB_slider" min="0" max="50" value="25" oninput="syncInput('gain_dB', this.value)">
+        <input type="number" id="gain_dB_num" value="25" onchange="syncInput('gain_dB', this.value)">
+      </div>
+    </section>
+
+    <aside class="panel side-panel">
+      <h2>Live Spectrum</h2>
+      <div class="chart-frame">
+        <canvas id="spectrumChart"></canvas>
+      </div>
+      <div class="status-box" id="settingsStatus">Connected to settings channel.</div>
+    </aside>
+  </main>
+
+  <script src="/static/js/settings.js"></script>
+</body>
+</html>
