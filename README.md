@@ -25,37 +25,7 @@ pronto_gr16/
 │   │   └── js/script.js         # Frontend logic (SocketIO handlers, API calls)
 │   └── templates/
 │       └── index.html           # Single-page web UI (3-column layout)
-├── requirements.txt             # Python dependencies
-└── README.md                    # This file
-```
-
-
-
-For Docker, we have :
-
-```
-pronto_gr16/
-├── gnuradio/                    # GNU Radio flowgraph scripts
-│   ├── full_TX_chain.py        # TX chain
-│   ├── spino_rx_lf_setup_epy_block_5.py  # block for reception
-│   ├── spino_rx_lf_setup.py    # RX chain: USRP → BPF → FSK demod → burst detection
-│   └── tx_commands/             # Folder with all the possible commands to send
-
-├── ihmv2/                       # Web application (Flask + SocketIO)
-│   ├── app.py                   # Main Flask app routing + WebSocket handler
-│   ├── config.py                # Centralized configuration (ZMQ URLs, paths, constants)
-│   ├── utils.py                 # Utility functions (CRC, hex parsing, AX.25 callsign encoding)
-│   ├── uplink.py                # TX command logic (frame building, socket management)
-│   ├── downlink.py              # RX frame parsing & decoding (CRC validation, descrambling)
-│   ├── static/
-│   │   ├── css/style.css        # UI styling (dark theme, responsive layout)
-│   │   └── js/script.js         # Frontend logic (SocketIO handlers, API calls)
-│   └── templates/
-│       └── index.html           # Single-page web UI (3-column layout)
-├── .gitignore                         # PGitignore file
-├── Dockerfile                        #  Settings of the container
-├── docker-compose.yml     # Enable the user to use the app within a container
-├── launch_spino.py                   # Alternative to Docker, that start the app (if the user have everything)
+├── launch_spino.py              # Local application launcher
 ├── requirements.txt             # Python dependencies
 └── README.md                    # This file
 ```
@@ -90,9 +60,9 @@ pronto_gr16/
 ### Web UI
 
 - **3-Column Layout**:
-  - **Left**: Command selection, operator ID input, single send button
-  - **Center**: RX statistics, last frame details, frame history
-  - **Right**: Recording control, console logs, event history
+   - **Left**: Command selection, operator ID input, single send button
+   - **Center**: RX statistics, last frame details, frame history
+   - **Right**: Recording control, console logs, event history
 - **Dark Theme**: Optimized for operations center displays
 - **Real-time Updates**: WebSocket-driven (Socket.IO)
 - **Recording**: Save RX frames to disk for post-analysis
@@ -101,64 +71,39 @@ pronto_gr16/
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - GNU Radio 3.10+
 - USRP hardware (compatible with UHD)
 
-### Running With Docker
-
-For now, the docker solution is not working. The project is still functionnal with the launch_spino.py.
-
-First, you need to have Docker installed on your device
-
-1. **Build and start the container:**
-   ```bash
-   docker compose up --build
-   ```
-
-2. **Open the web UI:**
-   Go to `http://localhost:5000`.
-
-3. **If you use a USRP in the container:**
-   Keep `/dev/bus/usb` available to the container. If your setup needs stricter access, adjust the Compose device mapping or run the container with the privileges required by UHD on your host.
-
-The container runs the Flask app directly and starts the GNU Radio flowgraphs headlessly. The web server listens on `0.0.0.0:5000` inside the container.
-
-
-### Setup (if you don't use Docker or if it doesn't work)
+### Setup
 
 1. **Install dependencies:**
    ```bash
-   cd pronto_gr16
-   pip install -r requirements.txt
+   python -m pip install -r requirements.txt
    ```
 
-2. **Copy helper modules:**
-   Ensure these are in the project root or Python path:
-   - `descambler.py` (bit descrambling for payloads)
-
-3. **Prepare command files:**
+2. **Prepare command files:**
    Command files should be in `gnuradio/tx_commands/` as `.txt` files with hex bytes (space or comma-separated).
 
 ### Running Locally
 
-1. **Start GNU Radio RX flowgraph** (in a separate terminal):
-   ```bash
-   python gnuradio/spino_rx_lf_setup.py
-   ```
-   This will:
-   - Open a GUI window with controls
-   - Listen on USRP
-   - Push telemetry to ZMQ 5555
-   - Push FFT spectrum to ZMQ 5557
-   - Listen for TX commands on ZMQ 8669
+From the project root, start the application:
 
-2. **Start Flask web server:**
    ```bash
-   cd ihmv2
-   python app.py
+   python launch_spino.py
    ```
-   Then open `http://localhost:5000` in your browser.
+
+The launcher starts the Flask application and opens `http://127.0.0.1:5000`. The application starts the RX flowgraph automatically; it starts the TX flowgraph when a command is sent. Do not start the RX flowgraph separately. GNU Radio, UHD, and the USRP must be available on the same host. Press Ctrl+C in the launcher terminal to stop the application.
+
+### Tests
+
+Run the unit tests from the project root:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+These tests exercise command parsing and frame encoding/decoding without starting GNU Radio or accessing radio hardware.
 
 ## API Endpoints
 
@@ -226,7 +171,6 @@ There is also the same structure for the settings page (with html, css and javas
 | RX frames not appearing | Ensure GNU Radio flowgraph is running, check ZMQ 5555 |
 | "Operator ID is required" | Fill in the Operator ID field before sending |
 | Web UI not loading | Check Flask is running on port 5000, check browser console for errors |
-| Docker container cannot see the USRP | Make sure `/dev/bus/usb` is mounted into the container and UHD can access the device |
 
 ## License
 
